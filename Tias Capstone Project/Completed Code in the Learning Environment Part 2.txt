@@ -1,0 +1,80 @@
+import codecademylib
+import pandas as pd
+from matplotlib import pyplot as plt
+
+species = pd.read_csv('species_info.csv')
+species.fillna('No Intervention', inplace = True)
+species['is_protected'] = species.conservation_status != 'No Intervention'
+
+observations = pd.read_csv('observations.csv')
+# print(observations.head())
+
+species['is_sheep'] = species.common_names.apply(lambda x: True if 'Sheep'
+       in x else False)
+
+species_is_sheep = species[species.is_sheep]
+
+# print(species_is_sheep)
+
+sheep_species = species[(species.is_sheep) & (species.category == 'Mammal')]
+
+# print(sheep_species)
+
+sheep_observations = observations.merge(sheep_species)
+
+# print(sheep_observations.head())
+
+obs_by_park = sheep_observations.groupby('park_name').observations.sum().\
+    reset_index()
+
+print(obs_by_park)
+
+# Plotting sheep sightings
+plt.figure(figsize=(16, 4))
+ax = plt.subplot()
+bar_height = obs_by_park.observations.values
+plt.bar(range(len(bar_height)), bar_height)
+ax.set_xticks(range(len(bar_height)))
+ax.set_xticklabels(obs_by_park.park_name.values)
+plt.ylabel('Number of Observations')
+plt.title('Observations of Sheep per Week')
+plt.show()
+
+# Percent of sheep observations across the National Parks
+total_sheep_obs = obs_by_park['observations'].sum()
+
+bryce_perc_obs = 250./total_sheep_obs
+great_perc_obs = 149./total_sheep_obs
+yellowstone_perc_obs = 507./total_sheep_obs
+yosemite_perc_obs = 282./total_sheep_obs
+
+parks_perc_obs = pd.Series(['Percent of Sheep', bryce_perc_obs, great_perc_obs, 
+    yellowstone_perc_obs, yosemite_perc_obs], index=['National Park', 'Bryce', 
+    'Great Smoky Mountains', 'Yellowstone', 'Yosemite'])
+
+# parks_perc_obs.to_csv('parks_percent_observations.csv')
+
+# Samply size determination
+baseline = 15
+
+minimum_detectable_effect = 100*5/15
+print(minimum_detectable_effect)
+
+sample_size_per_variant = 520  # Using Optimizely
+
+# Sightings by park (Assuming a baseline of 15% across all parks)
+bryce_weeks_obs = sample_size_per_variant/250.0
+great_obs = sample_size_per_variant/149.0
+yellowstone_weeks_obs = sample_size_per_variant/507.0
+yosemite_obs = sample_size_per_variant/282.0
+
+'''print(bryce_weeks_obs)
+print(great_obs)
+print(yellowstone_weeks_obs) 
+print(yosemite_obs)'''
+
+parks_weeks_obs = pd.Series(['Number of Weeks', bryce_weeks_obs, great_obs, 
+    yellowstone_weeks_obs, yosemite_obs], index=['National Park', 'Bryce', 
+    'Great Smoky Mountains', 'Yellowstone', 'Yosemite'])
+
+# parks_weeks_obs.to_csv('parks_observations.csv')

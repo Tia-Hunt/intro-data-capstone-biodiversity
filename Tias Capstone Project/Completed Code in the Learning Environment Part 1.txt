@@ -1,0 +1,149 @@
+from __future__ import print_function
+import codecademylib
+import pandas as pd
+from matplotlib import pyplot as plt
+from scipy.stats import chi2_contingency
+
+# Loading the Data
+species = pd.read_csv('species_info.csv')
+
+# print species.head()
+
+# Inspecting the DataFrame
+species_count = len(species)
+
+species_type = species.category.unique()
+
+conservation_statuses = species.conservation_status.unique()
+
+# Create df with number of species in each category
+num_species = species.groupby('category').scientific_name.count().reset_index()
+num_species.columns = ['Category', 'No. of species']
+
+# Percent of species in each category
+num_species['Percent'] = num_species['No. of species'] / \
+    num_species['No. of species'].sum()
+
+# num_species.to_csv('number_of_species.csv')
+
+# Analyze Species Conservation Status
+conservation_counts = species.groupby('conservation_status').scientific_name.\
+    count().reset_index()
+
+# print conservation_counts
+
+# Analyze Species Conservation Status II
+values = {'conservation_status': 'No Intervention'}
+
+# Only replace Null values in the conservation_status column
+species.fillna(value=values, inplace=True)
+
+conservation_counts_fixed = species.groupby('conservation_status').\
+    scientific_name.nunique().reset_index()
+
+conservation_counts_fixed.columns = ['Conservation Status', 'No. of species']
+
+# Percent of species in each status
+conservation_counts_fixed['Percent'] = \
+    conservation_counts_fixed['No. of species'] / \
+    conservation_counts_fixed['No. of species'].sum()
+
+# conservation_counts_fixed.to_csv('conservation_counts.csv')
+
+# Plotting Conservation Status by Species
+protection_counts = species.groupby('conservation_status')\
+    .scientific_name.nunique().reset_index()\
+    .sort_values(by='scientific_name')
+
+'''plt.figure(figsize=(10, 4))
+ax = plt.subplot()
+bar_heights = protection_counts.scientific_name.values
+labels = protection_counts.conservation_status.values
+plt.bar(range(len(bar_heights)), bar_heights)
+ax.set_xticks(range(len(bar_heights)))
+ax.set_xticklabels(labels)
+plt.ylabel('Number of Species')
+plt.title('Conservation Status by Species')
+plt.show()'''
+
+species['is_protected'] = species.conservation_status.apply(lambda x: True if
+       x != 'No Intervention' else False)
+
+category_counts = species.groupby(['category', 'is_protected'])\
+                         .scientific_name.nunique().reset_index()
+
+# print category_counts.head()
+
+category_pivot = category_counts.pivot(columns='is_protected',
+index='category', values='scientific_name').reset_index()
+
+category_pivot.columns = ['category', 'not_protected', 'protected']
+
+category_pivot['percent_not_protected'] = category_pivot.not_protected / \
+    (category_pivot.protected + category_pivot.not_protected)
+
+category_pivot['percent_protected'] = category_pivot.protected / \
+    (category_pivot.protected + category_pivot.not_protected)
+
+# category_pivot.to_csv('category_pivot.csv')
+ 
+'''
+# stacked bar graph
+plt.figure(figsize=(10, 4))
+ax2 = plt.subplot()
+bar_heights = protection_counts.scientific_name.values
+labels = protection_counts.conservation_status.values
+plt.bar(range(len(category_pivot.category)), category_pivot.not_protected, \
+        label = 'Not Protected')
+plt.bar(range(len(category_pivot.category)), category_pivot.protected, \
+        bottom = category_pivot.not_protected, label = 'Protected')
+ax2.set_xticks(range(len(category_pivot.category)))
+ax2.set_xticklabels(category_pivot.category)
+plt.ylabel('Number of Species')
+plt.title('Conservation Status by Species')
+plt.legend()
+plt.show() '''
+
+print(category_pivot)
+
+# Contingency tables for all categorys
+amphibian = [72, 7]
+bird = [413, 75]
+fish = [115, 11]
+mammal = [146, 30]
+nonvas_plant = [328, 5]
+reptile = [73, 5]
+vas_plant = [4216, 46]
+
+# is the p value significant
+def sig_pval(p):
+    if p > 0.05:
+        print('This is not a significant difference')
+    else:
+        print('This is a significant difference!')
+
+# Runs the chi squared test on two categories, and tests for significance 
+def chi2(i, j):
+    contingency = [i, j]
+    chi2, pval, dof, expected = chi2_contingency(contingency)
+    sig_pval(pval)
+
+# Is there a significant differnce between these categories?
+chi2(mammal, bird)
+chi2(mammal, reptile)
+
+# Create a table showing which categories sets have a differnce between them.
+species_type_list = list(species_type)
+species_type_list.insert(0, '')
+
+df = pd.DataFrame([\
+    [species_type_list[1:2], 'N/A', False, True, False, False, True, True],\
+    [species_type_list[2:3], False, 'N/A', False, False, False, True, True],\
+    [species_type_list[3:4], True, False, 'N/A', False, False, True, True],\
+    [species_type_list[4:5], False, False, False, 'N/A', False, True, True],\
+    [species_type_list[5:6], False, False, False, False, 'N/A', True, True],\
+    [species_type_list[6:7], True, True, True, True, True, 'N/A', False],\
+    [species_type_list[7:], True, True, True, True, True, False, 'N/A']],\
+    columns = species_type_list)
+
+# df.to_csv('difference_between_species.csv')
